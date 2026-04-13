@@ -1,0 +1,77 @@
+# Doodle Better - Configuration
+# ================================
+
+server:
+  # Set host to "auto" to use this machine's IPv4 address (discoverable on intranet)
+  # Set to "localhost" for local-only access, or a specific IP/hostname
+  host: "localhost"
+  port: 8000
+
+database:
+  # SQLite database file path (relative to project root)
+  path: "data/doodle_better.db"
+
+timezone:
+  # Timezone for poll scheduling (IANA timezone name)
+  tz: "America/New_York"
+
+polls:
+  # Day and time when weekly polls reset (new polls open)
+  weekly_reset_day: "Sunday"  # Day of the week
+  weekly_reset_hour: 12       # 24-hour format, noon
+
+admin:
+  # IP addresses allowed to create/edit/delete polls
+  # Includes localhost variations by default
+  ip_allowlist:
+    - "127.0.0.1"
+    - "::1"
+    - "localhost"
+
+blacklists:
+  # Blocked IP addresses (empty by default)
+  ip_blacklist: []
+  # Blocked usernames (empty by default)
+  username_blacklist: []
+
+frontend:
+  # Vite dev server port (used during development only)
+  dev_port: 5173
+
+default_events:
+  # Event templates seeded into a fresh database on first startup.
+  #
+  # Required fields for all events:
+  #   title        (string)  - display name
+  #   description  (string)  - short description
+  #   day_of_week  (string)  - full day name, e.g. "Monday", "Tuesday", etc.
+  #   start_time   (string)  - 24-hour HH:MM, e.g. "09:00", "13:30"
+  #   end_time     (string)  - 24-hour HH:MM, e.g. "10:00", "14:30"
+  #   is_recurring (bool)    - true to regenerate weekly; false for a one-off event
+  #
+  # Non-recurring events (is_recurring: false) are created once and will not
+  # automatically generate new poll instances each week.
+  - title: "Ultimate Frisbee"
+    description: "Weekly ultimate frisbee pickup game. Come out and play!"
+    day_of_week: "Tuesday"
+    start_time: "12:00"
+    end_time: "13:00"
+    is_recurring: true
+  - title: "Ultimate Frisbee"
+    description: "Weekly ultimate frisbee pickup game. Come out and play!"
+    day_of_week: "Wednesday"
+    start_time: "12:00"
+    end_time: "13:00"
+    is_recurring: true
+  - title: "Soccer"
+    description: "Weekly soccer pickup game. Lace up those boots!"
+    day_of_week: "Thursday"
+    start_time: "12:00"
+    end_time: "13:00"
+    is_recurring: true
+  - title: "Video Games"
+    description: "Weekly video game session. Bring your A-game!"
+    day_of_week: "Thursday"
+    start_time: "12:00"
+    end_time: "13:00"
+    is_recurring: true
