@@ -12,6 +12,7 @@ env/
 
 # uv
 .python-version
+.uv/
 
 # Database
 data/*.db

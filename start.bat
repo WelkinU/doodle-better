@@ -20,6 +20,6 @@ cd ..
 
 REM Start server
 echo [2/2] Starting server...
-python run.py
+.venv\Scripts\python.exe run.py
 
 pause

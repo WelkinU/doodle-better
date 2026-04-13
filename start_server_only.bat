@@ -5,4 +5,4 @@ REM  Use this after you've already built the frontend.
 REM ============================================================
 
 if not exist "data" mkdir data
-python run.py
+.venv\Scripts\python.exe run.py
