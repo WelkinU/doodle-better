@@ -57,15 +57,15 @@ def _check_username_blacklist(username: str):
         raise HTTPException(status_code=403, detail="This username is not allowed")
 
 
-def _poll_to_out(poll: Poll) -> PollOut:
+def _poll_to_out(poll: Poll, viewer_user_id: str | None = None) -> PollOut:
     votes_out = []
     for v in poll.votes:
         votes_out.append(VoteOut(
             id=v.id,
             poll_id=v.poll_id,
-            user_id=v.user_id,
             username=v.user.username if v.user else "Unknown",
             status=v.status,
+            is_mine=(viewer_user_id is not None and v.user_id == viewer_user_id),
         ))
     summary = {"in": 0, "tentative": 0, "out": 0}
     for v in votes_out:
@@ -74,8 +74,9 @@ def _poll_to_out(poll: Poll) -> PollOut:
     return PollOut(
         id=poll.id,
         template_id=poll.template_id,
-        created_by_user_id=poll.created_by_user_id,
+        has_owner=poll.created_by_user_id is not None,
         created_by_username=poll.creator.username if poll.creator else None,
+        is_my_poll=(viewer_user_id is not None and poll.created_by_user_id == viewer_user_id),
         title=poll.title,
         description=poll.description,
         event_date=poll.event_date,
@@ -159,7 +160,7 @@ def check_admin(request: Request):
 # ── Poll endpoints ──────────────────────────────────────────────────
 
 @router.get("/polls/week", response_model=WeekPollsOut)
-def get_current_week_polls(request: Request, db: Session = Depends(get_db)):
+def get_current_week_polls(request: Request, db: Session = Depends(get_db), viewer_user_id: str | None = None):
     _check_ip_blacklist(request)
     ws = get_week_start()
     polls = ensure_polls_for_week(db, ws)
@@ -174,13 +175,13 @@ def get_current_week_polls(request: Request, db: Session = Depends(get_db)):
     )
     return WeekPollsOut(
         week_start=ws.isoformat(),
-        open_polls=[_poll_to_out(p) for p in open_polls],
-        closed_polls=[_poll_to_out(p) for p in closed_polls],
+        open_polls=[_poll_to_out(p, viewer_user_id) for p in open_polls],
+        closed_polls=[_poll_to_out(p, viewer_user_id) for p in closed_polls],
     )
 
 
 @router.get("/polls/week/{week_start_str}", response_model=WeekPollsOut)
-def get_week_polls(week_start_str: str, request: Request, db: Session = Depends(get_db)):
+def get_week_polls(week_start_str: str, request: Request, db: Session = Depends(get_db), viewer_user_id: str | None = None):
     _check_ip_blacklist(request)
     try:
         ws = date.fromisoformat(week_start_str)
@@ -198,8 +199,8 @@ def get_week_polls(week_start_str: str, request: Request, db: Session = Depends(
     )
     return WeekPollsOut(
         week_start=ws.isoformat(),
-        open_polls=[_poll_to_out(p) for p in open_polls],
-        closed_polls=[_poll_to_out(p) for p in closed_polls],
+        open_polls=[_poll_to_out(p, viewer_user_id) for p in open_polls],
+        closed_polls=[_poll_to_out(p, viewer_user_id) for p in closed_polls],
     )
 
 
@@ -254,9 +255,9 @@ def cast_vote(poll_id: str, data: VoteCreate, request: Request, db: Session = De
         return VoteOut(
             id=existing_vote.id,
             poll_id=existing_vote.poll_id,
-            user_id=existing_vote.user_id,
             username=user.username,
             status=existing_vote.status,
+            is_mine=True,
         )
 
     vote = Vote(
@@ -271,9 +272,9 @@ def cast_vote(poll_id: str, data: VoteCreate, request: Request, db: Session = De
     return VoteOut(
         id=vote.id,
         poll_id=vote.poll_id,
-        user_id=vote.user_id,
         username=user.username,
         status=vote.status,
+        is_mine=True,
     )
 
 

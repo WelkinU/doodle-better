@@ -41,10 +41,10 @@ export default function PollCard({ poll, onVoteChange }: Props) {
   const [showEditModal, setShowEditModal] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
 
-  const myVote = poll.votes.find(v => v.user_id === userId);
-  const isOwner = isRegistered && poll.created_by_user_id === userId;
-  const canEdit = !poll.is_closed && poll.created_by_user_id !== null && (isOwner || isAdmin);
-  const canDelete = poll.created_by_user_id !== null && (isOwner || isAdmin);
+  const myVote = poll.votes.find(v => v.is_mine);
+  const isOwner = isRegistered && poll.is_my_poll;
+  const canEdit = !poll.is_closed && poll.has_owner && (isOwner || isAdmin);
+  const canDelete = poll.has_owner && (isOwner || isAdmin);
 
   const handleVote = async (status: 'in' | 'out' | 'tentative') => {
     if (!isRegistered || !username) return;
@@ -89,7 +89,7 @@ export default function PollCard({ poll, onVoteChange }: Props) {
             {poll.is_closed && <span className="poll-badge closed">Closed</span>}
             {poll.is_recurring && <span className="poll-badge recurring">🔁 Recurring</span>}
             {isOwner && <span className="poll-badge owner">Your Poll</span>}
-            {!isOwner && isAdmin && poll.created_by_user_id && (
+            {!isOwner && isAdmin && poll.has_owner && (
               <span className="poll-badge admin-managed">Admin</span>
             )}
           </div>

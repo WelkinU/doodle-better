@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import { getAvailableWeeks, getWeekPolls } from '../api';
 import PollCard from '../components/PollCard';
+import { useUser } from '../context/UserContext';
 import type { WeekPollsOut } from '../types';
 
 export default function HistoryPage() {
+  const { userId } = useUser();
   const [weeks, setWeeks] = useState<string[]>([]);
   const [selectedWeek, setSelectedWeek] = useState<string | null>(null);
   const [data, setData] = useState<WeekPollsOut | null>(null);
@@ -26,11 +28,11 @@ export default function HistoryPage() {
   useEffect(() => {
     if (!selectedWeek) return;
     setLoading(true);
-    getWeekPolls(selectedWeek)
+    getWeekPolls(selectedWeek, userId || undefined)
       .then(setData)
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [selectedWeek]);
+  }, [selectedWeek, userId]);
 
   const formatWeekLabel = (ws: string) => {
     const d = new Date(ws + 'T00:00:00');

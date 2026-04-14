@@ -31,11 +31,15 @@ export const checkCollision = (userId: string, pollId: string) =>
   );
 
 // Polls
-export const getCurrentWeekPolls = () =>
-  request<import('./types').WeekPollsOut>('/polls/week');
+export const getCurrentWeekPolls = (viewerUserId?: string) =>
+  request<import('./types').WeekPollsOut>(
+    viewerUserId ? `/polls/week?viewer_user_id=${encodeURIComponent(viewerUserId)}` : '/polls/week'
+  );
 
-export const getWeekPolls = (weekStart: string) =>
-  request<import('./types').WeekPollsOut>(`/polls/week/${weekStart}`);
+export const getWeekPolls = (weekStart: string, viewerUserId?: string) =>
+  request<import('./types').WeekPollsOut>(
+    `/polls/week/${weekStart}${viewerUserId ? `?viewer_user_id=${encodeURIComponent(viewerUserId)}` : ''}`
+  );
 
 export const getAvailableWeeks = () =>
   request<string[]>('/polls/weeks');
@@ -116,3 +120,6 @@ export const adminResetVotes = (pollId: string) =>
 
 export const adminRemoveVote = (pollId: string, voteId: number) =>
   request<{ ok: boolean }>(`/admin/polls/${pollId}/votes/${voteId}`, { method: 'DELETE' });
+
+export const adminDeletePoll = (pollId: string) =>
+  request<{ ok: boolean }>(`/admin/polls/${pollId}`, { method: 'DELETE' });

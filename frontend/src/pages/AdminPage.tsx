@@ -1,5 +1,5 @@
 ﻿import { useEffect, useState } from 'react';
-import { getTemplates, createTemplate, updateTemplate, deleteTemplate, getAdminPolls, deleteUserPoll } from '../api';
+import { getTemplates, createTemplate, updateTemplate, deleteTemplate, getAdminPolls, adminDeletePoll } from '../api';
 import AdminVoteModal from '../components/AdminVoteModal';
 import { useUser } from '../context/UserContext';
 import type { EventTemplateOut, PollOut } from '../types';
@@ -42,7 +42,7 @@ export default function AdminPage() {
     Promise.all([getTemplates(), getAdminPolls()])
       .then(([tmpls, polls]) => {
         setTemplates(tmpls);
-        setUserPolls(polls.filter(p => p.created_by_user_id !== null));
+        setUserPolls(polls.filter(p => p.has_owner));
         // Build a map of template_id -> most recent poll for that template
         const map: Record<string, PollOut> = {};
         for (const poll of polls) {
@@ -116,7 +116,7 @@ export default function AdminPage() {
     const choice = confirm(`Delete the poll "${poll.title}"?\n\nThis cannot be undone.`);
     if (!choice) return;
     try {
-      await deleteUserPoll(poll.id, poll.created_by_user_id!);
+      await adminDeletePoll(poll.id);
       fetchTemplates();
     } catch (err: unknown) {
       alert(err instanceof Error ? err.message : 'Failed to delete');

@@ -28,9 +28,9 @@ class VoteCreate(BaseModel):
 class VoteOut(BaseModel):
     id: int
     poll_id: str
-    user_id: str
     username: str
     status: str
+    is_mine: bool = False
 
     class Config:
         from_attributes = True
@@ -39,8 +39,9 @@ class VoteOut(BaseModel):
 class PollOut(BaseModel):
     id: str
     template_id: str | None
-    created_by_user_id: str | None
+    has_owner: bool  # True if created by a user (not auto-generated)
     created_by_username: str | None
+    is_my_poll: bool = False  # True if the viewer is the creator
     title: str
     description: str | None
     event_date: str

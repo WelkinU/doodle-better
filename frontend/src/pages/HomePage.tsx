@@ -2,10 +2,12 @@ import { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { getCurrentWeekPolls, getWeekPolls } from '../api';
 import PollCard from '../components/PollCard';
+import { useUser } from '../context/UserContext';
 import type { WeekPollsOut } from '../types';
 
 export default function HomePage() {
   const { weekStart } = useParams<{ weekStart?: string }>();
+  const { userId } = useUser();
   const [data, setData] = useState<WeekPollsOut | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -19,8 +21,8 @@ export default function HomePage() {
     setError(null);
     try {
       const result = weekStart
-        ? await getWeekPolls(weekStart)
-        : await getCurrentWeekPolls();
+        ? await getWeekPolls(weekStart, userId || undefined)
+        : await getCurrentWeekPolls(userId || undefined);
       setData(result);
     } catch {
       setError(
@@ -30,7 +32,7 @@ export default function HomePage() {
     } finally {
       setLoading(false);
     }
-  }, [weekStart]);
+  }, [weekStart, userId]);
 
   useEffect(() => {
     fetchPolls();

@@ -1,6 +1,5 @@
 import { useEffect } from 'react';
 import type { VoteOut } from '../types';
-import { useUser } from '../context/UserContext';
 
 const STATUS_COLORS: Record<string, string> = {
   in: 'vote-in',
@@ -23,7 +22,6 @@ interface Props {
 }
 
 export default function VoteListModal({ title, votes, onClose }: Props) {
-  const { userId } = useUser();
 
   // Close on Escape key
   useEffect(() => {
@@ -67,7 +65,7 @@ export default function VoteListModal({ title, votes, onClose }: Props) {
                 {sorted.map(vote => (
                   <tr
                     key={vote.id}
-                    className={`vote-row ${STATUS_COLORS[vote.status]} ${vote.user_id === userId ? 'vote-mine' : ''}`}
+                    className={`vote-row ${STATUS_COLORS[vote.status]} ${vote.is_mine ? 'vote-mine' : ''}`}
                   >
                     <td className="vote-name">{vote.username}</td>
                     <td className="vote-status">{STATUS_LABELS[vote.status]}</td>

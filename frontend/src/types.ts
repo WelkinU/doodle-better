@@ -1,16 +1,17 @@
 export interface VoteOut {
   id: number;
   poll_id: string;
-  user_id: string;
   username: string;
   status: 'in' | 'out' | 'tentative' | 'no-reply';
+  is_mine: boolean;
 }
 
 export interface PollOut {
   id: string;
   template_id: string | null;
-  created_by_user_id: string | null;
+  has_owner: boolean;       // true if created by a user (not auto-generated)
   created_by_username: string | null;
+  is_my_poll: boolean;      // true if the current viewer is the creator
   title: string;
   description: string | null;
   event_date: string;
