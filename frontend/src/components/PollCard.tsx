@@ -58,7 +58,7 @@ export default function PollCard({ poll, onVoteChange }: Props) {
       if (collision.has_collision) {
         setCollisionWarning(collision.message);
       }
-      await castVote(poll.id, userId, status);
+      await castVote(poll.id, status);
       onVoteChange();
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Vote failed';
@@ -71,7 +71,7 @@ export default function PollCard({ poll, onVoteChange }: Props) {
   const handleDelete = async () => {
     if (!deleteConfirm) { setDeleteConfirm(true); return; }
     try {
-      await deleteUserPoll(poll.id, userId);
+      await deleteUserPoll(poll.id);
       onVoteChange();
     } catch (err: unknown) {
       alert(err instanceof Error ? err.message : 'Delete failed');

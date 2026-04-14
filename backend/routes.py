@@ -2,7 +2,7 @@
 
 from datetime import date, timedelta
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from sqlalchemy import and_
 from sqlalchemy.orm import Session
 
@@ -55,6 +55,23 @@ def _is_admin(request: Request) -> bool:
 def _check_username_blacklist(username: str):
     if username.strip().lower() in [u.lower() for u in config.username_blacklist]:
         raise HTTPException(status_code=403, detail="This username is not allowed")
+
+
+def _require_token(x_user_token: str | None, db: Session) -> User:
+    """Resolve the authenticated user from X-User-Token header. Raises 401 if missing/invalid."""
+    if not x_user_token:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    user = db.query(User).filter(User.token == x_user_token).first()
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    return user
+
+
+def _token_user_optional(x_user_token: str | None, db: Session) -> User | None:
+    """Resolve user from token if present; return None otherwise."""
+    if not x_user_token:
+        return None
+    return db.query(User).filter(User.token == x_user_token).first()
 
 
 def _poll_to_out(poll: Poll, viewer_user_id: str | None = None) -> PollOut:
@@ -119,19 +136,18 @@ def create_or_get_user(data: UserCreate, request: Request, db: Session = Depends
 
 
 @router.put("/users/{user_id}", response_model=UserOut)
-def update_username(user_id: str, data: UserCreate, request: Request, db: Session = Depends(get_db)):
+def update_username(user_id: str, data: UserCreate, request: Request, db: Session = Depends(get_db), x_user_token: str | None = Header(default=None)):
     _check_ip_blacklist(request)
     _check_username_blacklist(data.username)
     ip = _get_client_ip(request)
-
-    user = db.query(User).filter(User.id == user_id).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    user.username = data.username.strip()
-    user.ip_address = ip
+    auth_user = _require_token(x_user_token, db)
+    if auth_user.id != user_id:
+        raise HTTPException(status_code=403, detail="Cannot update another user's profile")
+    auth_user.username = data.username.strip()
+    auth_user.ip_address = ip
     db.commit()
-    db.refresh(user)
-    return user
+    db.refresh(auth_user)
+    return auth_user
 
 
 @router.get("/users/{user_id}/collision", response_model=UsernameCollisionWarning)
@@ -160,10 +176,12 @@ def check_admin(request: Request):
 # ── Poll endpoints ──────────────────────────────────────────────────
 
 @router.get("/polls/week", response_model=WeekPollsOut)
-def get_current_week_polls(request: Request, db: Session = Depends(get_db), viewer_user_id: str | None = None):
+def get_current_week_polls(request: Request, db: Session = Depends(get_db), x_user_token: str | None = Header(default=None)):
     _check_ip_blacklist(request)
     ws = get_week_start()
     polls = ensure_polls_for_week(db, ws)
+    viewer = _token_user_optional(x_user_token, db)
+    viewer_user_id = viewer.id if viewer else None
 
     open_polls = sorted(
         [p for p in polls if not p.is_closed],
@@ -181,12 +199,14 @@ def get_current_week_polls(request: Request, db: Session = Depends(get_db), view
 
 
 @router.get("/polls/week/{week_start_str}", response_model=WeekPollsOut)
-def get_week_polls(week_start_str: str, request: Request, db: Session = Depends(get_db), viewer_user_id: str | None = None):
+def get_week_polls(week_start_str: str, request: Request, db: Session = Depends(get_db), x_user_token: str | None = Header(default=None)):
     _check_ip_blacklist(request)
     try:
         ws = date.fromisoformat(week_start_str)
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD.")
+    viewer = _token_user_optional(x_user_token, db)
+    viewer_user_id = viewer.id if viewer else None
 
     polls = ensure_polls_for_week(db, ws)
     open_polls = sorted(
@@ -219,9 +239,10 @@ def list_available_weeks(request: Request, db: Session = Depends(get_db)):
 # ── Vote endpoints ──────────────────────────────────────────────────
 
 @router.post("/polls/{poll_id}/vote", response_model=VoteOut)
-def cast_vote(poll_id: str, data: VoteCreate, request: Request, db: Session = Depends(get_db)):
+def cast_vote(poll_id: str, data: VoteCreate, request: Request, db: Session = Depends(get_db), x_user_token: str | None = Header(default=None)):
     _check_ip_blacklist(request)
     ip = _get_client_ip(request)
+    user = _require_token(x_user_token, db)
 
     poll = db.query(Poll).filter(Poll.id == poll_id).first()
     if not poll:
@@ -236,15 +257,11 @@ def cast_vote(poll_id: str, data: VoteCreate, request: Request, db: Session = De
     if data.status not in ("in", "out", "tentative"):
         raise HTTPException(status_code=400, detail="Invalid vote status")
 
-    user = db.query(User).filter(User.id == data.user_id).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found. Register first.")
-
     _check_username_blacklist(user.username)
 
     # Upsert vote
     existing_vote = db.query(Vote).filter(
-        and_(Vote.poll_id == poll_id, Vote.user_id == data.user_id)
+        and_(Vote.poll_id == poll_id, Vote.user_id == user.id)
     ).first()
 
     if existing_vote:
@@ -262,7 +279,7 @@ def cast_vote(poll_id: str, data: VoteCreate, request: Request, db: Session = De
 
     vote = Vote(
         poll_id=poll_id,
-        user_id=data.user_id,
+        user_id=user.id,
         status=data.status,
         ip_address=ip,
     )
@@ -278,9 +295,10 @@ def cast_vote(poll_id: str, data: VoteCreate, request: Request, db: Session = De
     )
 
 
-@router.delete("/polls/{poll_id}/vote/{user_id}")
-def remove_vote(poll_id: str, user_id: str, request: Request, db: Session = Depends(get_db)):
+@router.delete("/polls/{poll_id}/vote")
+def remove_vote(poll_id: str, request: Request, db: Session = Depends(get_db), x_user_token: str | None = Header(default=None)):
     _check_ip_blacklist(request)
+    user = _require_token(x_user_token, db)
 
     poll = db.query(Poll).filter(Poll.id == poll_id).first()
     if not poll:
@@ -289,7 +307,7 @@ def remove_vote(poll_id: str, user_id: str, request: Request, db: Session = Depe
         raise HTTPException(status_code=400, detail="This poll is closed")
 
     vote = db.query(Vote).filter(
-        and_(Vote.poll_id == poll_id, Vote.user_id == user_id)
+        and_(Vote.poll_id == poll_id, Vote.user_id == user.id)
     ).first()
     if not vote:
         raise HTTPException(status_code=404, detail="Vote not found")
@@ -302,11 +320,9 @@ def remove_vote(poll_id: str, user_id: str, request: Request, db: Session = Depe
 # ── User poll management (non-admin) ────────────────────────────────
 
 @router.post("/polls", response_model=PollOut)
-def user_create_poll(data: UserPollCreate, request: Request, db: Session = Depends(get_db)):
+def user_create_poll(data: UserPollCreate, request: Request, db: Session = Depends(get_db), x_user_token: str | None = Header(default=None)):
     _check_ip_blacklist(request)
-    user = db.query(User).filter(User.id == data.user_id).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found. Register first.")
+    user = _require_token(x_user_token, db)
     try:
         ed = date.fromisoformat(data.event_date)
     except ValueError:
@@ -319,21 +335,22 @@ def user_create_poll(data: UserPollCreate, request: Request, db: Session = Depen
         start_time=data.start_time,
         end_time=data.end_time,
         week_start=ws.isoformat(),
-        created_by_user_id=data.user_id,
+        created_by_user_id=user.id,
     )
     db.add(poll)
     db.commit()
     db.refresh(poll)
-    return _poll_to_out(poll)
+    return _poll_to_out(poll, viewer_user_id=user.id)
 
 
 @router.put("/polls/{poll_id}", response_model=PollOut)
-def user_update_poll(poll_id: str, data: UserPollUpdate, request: Request, db: Session = Depends(get_db)):
+def user_update_poll(poll_id: str, data: UserPollUpdate, request: Request, db: Session = Depends(get_db), x_user_token: str | None = Header(default=None)):
     _check_ip_blacklist(request)
+    user = _require_token(x_user_token, db)
     poll = db.query(Poll).filter(Poll.id == poll_id).first()
     if not poll:
         raise HTTPException(status_code=404, detail="Poll not found")
-    if poll.created_by_user_id != data.user_id and not _is_admin(request):
+    if poll.created_by_user_id != user.id and not _is_admin(request):
         raise HTTPException(status_code=403, detail="You can only edit polls you created")
     if poll.is_closed:
         raise HTTPException(status_code=400, detail="Cannot edit a closed poll")
@@ -354,16 +371,17 @@ def user_update_poll(poll_id: str, data: UserPollUpdate, request: Request, db: S
         poll.end_time = data.end_time
     db.commit()
     db.refresh(poll)
-    return _poll_to_out(poll)
+    return _poll_to_out(poll, viewer_user_id=user.id)
 
 
 @router.delete("/polls/{poll_id}")
-def user_delete_poll(poll_id: str, user_id: str, request: Request, db: Session = Depends(get_db)):
+def user_delete_poll(poll_id: str, request: Request, db: Session = Depends(get_db), x_user_token: str | None = Header(default=None)):
     _check_ip_blacklist(request)
+    user = _require_token(x_user_token, db)
     poll = db.query(Poll).filter(Poll.id == poll_id).first()
     if not poll:
         raise HTTPException(status_code=404, detail="Poll not found")
-    if poll.created_by_user_id != user_id and not _is_admin(request):
+    if poll.created_by_user_id != user.id and not _is_admin(request):
         raise HTTPException(status_code=403, detail="You can only delete polls you created")
     db.delete(poll)
     db.commit()

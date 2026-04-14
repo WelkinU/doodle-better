@@ -55,6 +55,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
       createOrGetUser(username, userId)
         .then(user => {
           setUserId(user.id);
+          localStorage.setItem('doodle-token', user.token);
           setIsRegistered(true);
         })
         .catch(() => {});
@@ -71,9 +72,11 @@ export function UserProvider({ children }: { children: ReactNode }) {
       if (isRegistered) {
         const user = await updateUsername(userId, trimmed);
         setUserId(user.id);
+        localStorage.setItem('doodle-token', user.token);
       } else {
         const user = await createOrGetUser(trimmed, userId);
         setUserId(user.id);
+        localStorage.setItem('doodle-token', user.token);
         setIsRegistered(true);
       }
     } catch {

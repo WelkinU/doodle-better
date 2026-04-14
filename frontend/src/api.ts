@@ -1,8 +1,12 @@
 const BASE = '/api';
 
 async function request<T>(url: string, options?: RequestInit): Promise<T> {
+  const token = localStorage.getItem('doodle-token');
   const res = await fetch(`${BASE}${url}`, {
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { 'X-User-Token': token } : {}),
+    },
     ...options,
   });
   if (!res.ok) {
@@ -14,13 +18,13 @@ async function request<T>(url: string, options?: RequestInit): Promise<T> {
 
 // Users
 export const createOrGetUser = (username: string, userId?: string) =>
-  request<{ id: string; username: string }>('/users', {
+  request<{ id: string; username: string; token: string }>('/users', {
     method: 'POST',
     body: JSON.stringify({ username, user_id: userId }),
   });
 
 export const updateUsername = (userId: string, username: string) =>
-  request<{ id: string; username: string }>(`/users/${userId}`, {
+  request<{ id: string; username: string; token: string }>(`/users/${userId}`, {
     method: 'PUT',
     body: JSON.stringify({ username, user_id: userId }),
   });
@@ -31,28 +35,24 @@ export const checkCollision = (userId: string, pollId: string) =>
   );
 
 // Polls
-export const getCurrentWeekPolls = (viewerUserId?: string) =>
-  request<import('./types').WeekPollsOut>(
-    viewerUserId ? `/polls/week?viewer_user_id=${encodeURIComponent(viewerUserId)}` : '/polls/week'
-  );
+export const getCurrentWeekPolls = () =>
+  request<import('./types').WeekPollsOut>('/polls/week');
 
-export const getWeekPolls = (weekStart: string, viewerUserId?: string) =>
-  request<import('./types').WeekPollsOut>(
-    `/polls/week/${weekStart}${viewerUserId ? `?viewer_user_id=${encodeURIComponent(viewerUserId)}` : ''}`
-  );
+export const getWeekPolls = (weekStart: string) =>
+  request<import('./types').WeekPollsOut>(`/polls/week/${weekStart}`);
 
 export const getAvailableWeeks = () =>
   request<string[]>('/polls/weeks');
 
 // Votes
-export const castVote = (pollId: string, userId: string, status: string) =>
+export const castVote = (pollId: string, status: string) =>
   request<import('./types').VoteOut>(`/polls/${pollId}/vote`, {
     method: 'POST',
-    body: JSON.stringify({ user_id: userId, status }),
+    body: JSON.stringify({ status }),
   });
 
-export const removeVote = (pollId: string, userId: string) =>
-  request<{ ok: boolean }>(`/polls/${pollId}/vote/${userId}`, {
+export const removeVote = (pollId: string) =>
+  request<{ ok: boolean }>(`/polls/${pollId}/vote`, {
     method: 'DELETE',
   });
 
@@ -92,7 +92,7 @@ export const deleteTemplate = (id: string, deleteFuture: boolean) =>
 
 // User-created polls
 export const createUserPoll = (data: {
-  user_id: string; title: string; description: string;
+  title: string; description: string;
   event_date: string; start_time: string; end_time: string;
 }) =>
   request<import('./types').PollOut>('/polls', {
@@ -101,7 +101,7 @@ export const createUserPoll = (data: {
   });
 
 export const updateUserPoll = (poll_id: string, data: {
-  user_id: string; title?: string; description?: string;
+  title?: string; description?: string;
   event_date?: string; start_time?: string; end_time?: string;
 }) =>
   request<import('./types').PollOut>(`/polls/${poll_id}`, {
@@ -109,8 +109,8 @@ export const updateUserPoll = (poll_id: string, data: {
     body: JSON.stringify(data),
   });
 
-export const deleteUserPoll = (poll_id: string, user_id: string) =>
-  request<{ ok: boolean }>(`/polls/${poll_id}?user_id=${encodeURIComponent(user_id)}`, {
+export const deleteUserPoll = (poll_id: string) =>
+  request<{ ok: boolean }>(`/polls/${poll_id}`, {
     method: 'DELETE',
   });
 

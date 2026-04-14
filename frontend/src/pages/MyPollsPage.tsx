@@ -23,7 +23,7 @@ export default function MyPollsPage() {
       // Fetch all available weeks and collect polls owned by this user
       const weeks = await getAvailableWeeks();
       // Always include current week even if not in history yet
-      const currentResult = await getCurrentWeekPolls(userId);
+      const currentResult = await getCurrentWeekPolls();
       const weekSet = new Set(weeks);
       weekSet.add(currentResult.week_start);
 
@@ -40,7 +40,7 @@ export default function MyPollsPage() {
 
       // Then fetch remaining weeks
       const otherWeeks = [...weekSet].filter(w => w !== currentResult.week_start);
-      const results = await Promise.all(otherWeeks.map(w => getWeekPolls(w, userId)));
+      const results = await Promise.all(otherWeeks.map(w => getWeekPolls(w)));
       for (const r of results) {
         for (const p of [...r.open_polls, ...r.closed_polls]) {
           if (p.is_my_poll && !seen.has(p.id)) {

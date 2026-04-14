@@ -1,5 +1,6 @@
 """SQLAlchemy ORM models."""
 
+import secrets
 import uuid
 from datetime import datetime
 
@@ -13,11 +14,16 @@ def _generate_uuid() -> str:
     return str(uuid.uuid4())
 
 
+def _generate_token() -> str:
+    return secrets.token_hex(32)
+
+
 class User(Base):
     __tablename__ = "users"
 
     id = Column(String(36), primary_key=True, default=_generate_uuid)
     username = Column(String(100), nullable=False)
+    token = Column(String(64), nullable=False, default=_generate_token, unique=True)
     ip_address = Column(String(45), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

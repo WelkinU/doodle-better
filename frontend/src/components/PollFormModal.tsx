@@ -10,7 +10,7 @@ interface Props {
 }
 
 export default function PollFormModal({ existing, onClose, onSaved }: Props) {
-  const { userId, isRegistered } = useUser();
+  const { isRegistered } = useUser();
   const [title, setTitle] = useState(existing?.title ?? '');
   const [description, setDescription] = useState(existing?.description ?? '');
   const [eventDate, setEventDate] = useState(existing?.event_date ?? '');
@@ -42,7 +42,6 @@ export default function PollFormModal({ existing, onClose, onSaved }: Props) {
     try {
       if (existing) {
         await updateUserPoll(existing.id, {
-          user_id: userId,
           title,
           description,
           event_date: eventDate,
@@ -51,7 +50,6 @@ export default function PollFormModal({ existing, onClose, onSaved }: Props) {
         });
       } else {
         await createUserPoll({
-          user_id: userId,
           title,
           description,
           event_date: eventDate,

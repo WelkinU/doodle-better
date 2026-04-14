@@ -15,13 +15,13 @@ class UserUpdate(BaseModel):
 class UserOut(BaseModel):
     id: str
     username: str
+    token: str
 
     class Config:
         from_attributes = True
 
 
 class VoteCreate(BaseModel):
-    user_id: str
     status: str  # in, out, tentative
 
 
@@ -58,7 +58,6 @@ class PollOut(BaseModel):
 
 
 class UserPollCreate(BaseModel):
-    user_id: str
     title: str
     description: str = ""
     event_date: str   # YYYY-MM-DD
@@ -67,7 +66,6 @@ class UserPollCreate(BaseModel):
 
 
 class UserPollUpdate(BaseModel):
-    user_id: str
     title: str | None = None
     description: str | None = None
     event_date: str | None = None
