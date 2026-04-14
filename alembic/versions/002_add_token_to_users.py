@@ -15,15 +15,15 @@ depends_on = None
 
 
 def upgrade():
-    # Add token column with a SQL default so existing rows get unique tokens automatically.
-    # (SQLite does not support ALTER COLUMN to change nullability after the fact,
-    # so we enforce NOT NULL at the application/model layer instead.)
-    op.add_column('users', sa.Column(
-        'token',
-        sa.String(64),
-        nullable=True,
-        server_default=sa.text("lower(hex(randomblob(32)))")
-    ))
+    op.add_column('users', sa.Column('token', sa.String(64), nullable=True))
+    # Populate tokens for existing rows using Python (SQLite doesn't support
+    # non-constant defaults in ALTER TABLE across all versions)
+    import secrets
+    bind = op.get_bind()
+    users = bind.execute(sa.text("SELECT id FROM users WHERE token IS NULL")).fetchall()
+    for (uid,) in users:
+        token = secrets.token_hex(32)
+        bind.execute(sa.text("UPDATE users SET token = :t WHERE id = :id"), {"t": token, "id": uid})
 
 
 def downgrade():
