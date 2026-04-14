@@ -1,6 +1,8 @@
-import { useEffect, useState } from 'react';
-import { getTemplates, createTemplate, updateTemplate, deleteTemplate } from '../api';
-import type { EventTemplateOut } from '../types';
+﻿import { useEffect, useState } from 'react';
+import { getTemplates, createTemplate, updateTemplate, deleteTemplate, getAdminPolls, deleteUserPoll } from '../api';
+import AdminVoteModal from '../components/AdminVoteModal';
+import { useUser } from '../context/UserContext';
+import type { EventTemplateOut, PollOut } from '../types';
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
@@ -23,7 +25,11 @@ const emptyForm: FormData = {
 };
 
 export default function AdminPage() {
+  const { userId } = useUser();
   const [templates, setTemplates] = useState<EventTemplateOut[]>([]);
+  const [userPolls, setUserPolls] = useState<PollOut[]>([]);
+  const [templatePollMap, setTemplatePollMap] = useState<Record<string, PollOut>>({});
+  const [managingVotesPoll, setManagingVotesPoll] = useState<PollOut | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
@@ -33,8 +39,21 @@ export default function AdminPage() {
   const fetchTemplates = () => {
     setLoading(true);
     setError(null);
-    getTemplates()
-      .then(setTemplates)
+    Promise.all([getTemplates(), getAdminPolls()])
+      .then(([tmpls, polls]) => {
+        setTemplates(tmpls);
+        setUserPolls(polls.filter(p => p.created_by_user_id !== null));
+        // Build a map of template_id -> most recent poll for that template
+        const map: Record<string, PollOut> = {};
+        for (const poll of polls) {
+          if (!poll.template_id) continue;
+          const existing = map[poll.template_id];
+          if (!existing || poll.event_date > existing.event_date) {
+            map[poll.template_id] = poll;
+          }
+        }
+        setTemplatePollMap(map);
+      })
       .catch(err => setError(err.message))
       .finally(() => setLoading(false));
   };
@@ -45,7 +64,7 @@ export default function AdminPage() {
 
   const handleCreate = async () => {
     try {
-      await createTemplate(form);
+      await createTemplate({ ...form, created_by_user_id: userId || undefined });
       setForm(emptyForm);
       setShowCreate(false);
       fetchTemplates();
@@ -91,6 +110,17 @@ export default function AdminPage() {
       is_recurring: tmpl.is_recurring,
     });
     setShowCreate(false);
+  };
+
+  const handleDeleteUserPoll = async (poll: PollOut) => {
+    const choice = confirm(`Delete the poll "${poll.title}"?\n\nThis cannot be undone.`);
+    if (!choice) return;
+    try {
+      await deleteUserPoll(poll.id, poll.created_by_user_id!);
+      fetchTemplates();
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Failed to delete');
+    }
   };
 
   if (error?.includes('Admin access required')) {
@@ -187,6 +217,9 @@ export default function AdminPage() {
             </div>
             <div className="template-actions">
               <button className="btn btn-sm" onClick={() => startEdit(tmpl)}>✏️ Edit</button>
+              {templatePollMap[tmpl.id] && (
+                <button className="btn btn-sm btn-manage-votes" onClick={() => setManagingVotesPoll(templatePollMap[tmpl.id])}>🗳️ Manage Votes</button>
+              )}
               <button className="btn btn-sm btn-danger" onClick={() => handleDelete(tmpl.id)}>🗑️ Delete</button>
             </div>
           </div>
@@ -195,6 +228,41 @@ export default function AdminPage() {
           <div className="empty-state">No event templates yet. Create one above!</div>
         )}
       </div>
+
+      {/* User-created polls */}
+      <div className="admin-section">
+        <h3 className="admin-section-title">User-Created Polls</h3>
+        {!loading && userPolls.length === 0 && (
+          <div className="empty-state">No user-created polls yet.</div>
+        )}
+        <div className="template-list">
+          {userPolls.map(poll => (
+            <div key={poll.id} className="template-card">
+              <div className="template-info">
+                <h4>{poll.title}{poll.is_closed && <span className="recurring-badge" style={{ marginLeft: '0.5rem' }}>Closed</span>}</h4>
+                <p className="template-schedule">
+                  {new Date(poll.event_date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
+                  {' · '}{poll.start_time} – {poll.end_time}
+                  {poll.created_by_username && <span style={{ fontStyle: 'italic', marginLeft: '0.5rem', opacity: 0.75 }}>by {poll.created_by_username}</span>}
+                </p>
+                {poll.description && <p className="template-desc">{poll.description}</p>}
+              </div>
+              <div className="template-actions">
+                <button className="btn btn-sm btn-manage-votes" onClick={() => setManagingVotesPoll(poll)}>🗳️ Manage Votes</button>
+                <button className="btn btn-sm btn-danger" onClick={() => handleDeleteUserPoll(poll)}>🗑️ Delete</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {managingVotesPoll && (
+        <AdminVoteModal
+          poll={managingVotesPoll}
+          onClose={() => setManagingVotesPoll(null)}
+          onChanged={fetchTemplates}
+        />
+      )}
     </div>
   );
 }

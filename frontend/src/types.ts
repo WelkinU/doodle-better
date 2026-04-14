@@ -9,12 +9,15 @@ export interface VoteOut {
 export interface PollOut {
   id: string;
   template_id: string | null;
+  created_by_user_id: string | null;
+  created_by_username: string | null;
   title: string;
   description: string | null;
   event_date: string;
   start_time: string;
   end_time: string;
   is_closed: boolean;
+  is_recurring: boolean;
   week_start: string;
   votes: VoteOut[];
   summary: { in: number; tentative: number; out: number };

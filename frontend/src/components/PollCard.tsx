@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { castVote, checkCollision } from '../api';
+import { castVote, checkCollision, deleteUserPoll } from '../api';
 import { useUser } from '../context/UserContext';
 import type { PollOut } from '../types';
+import PollFormModal from './PollFormModal';
 import VoteListModal from './VoteListModal';
 
 interface Props {
@@ -33,12 +34,17 @@ function formatDate(dateStr: string): string {
 }
 
 export default function PollCard({ poll, onVoteChange }: Props) {
-  const { userId, username, isRegistered } = useUser();
+  const { userId, username, isRegistered, isAdmin } = useUser();
   const [loading, setLoading] = useState(false);
   const [collisionWarning, setCollisionWarning] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
 
   const myVote = poll.votes.find(v => v.user_id === userId);
+  const isOwner = isRegistered && poll.created_by_user_id === userId;
+  const canEdit = !poll.is_closed && poll.created_by_user_id !== null && (isOwner || isAdmin);
+  const canDelete = poll.created_by_user_id !== null && (isOwner || isAdmin);
 
   const handleVote = async (status: 'in' | 'out' | 'tentative') => {
     if (!isRegistered || !username) return;
@@ -62,18 +68,40 @@ export default function PollCard({ poll, onVoteChange }: Props) {
     }
   };
 
+  const handleDelete = async () => {
+    if (!deleteConfirm) { setDeleteConfirm(true); return; }
+    try {
+      await deleteUserPoll(poll.id, userId);
+      onVoteChange();
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Delete failed');
+    } finally {
+      setDeleteConfirm(false);
+    }
+  };
+
   return (
     <div className={`poll-card ${poll.is_closed ? 'poll-closed' : ''}`}>
       <div className="poll-header">
         <div className="poll-title-row">
           <h3 className="poll-title">{poll.title}</h3>
-          {poll.is_closed && <span className="poll-badge closed">Closed</span>}
+          <div className="poll-title-badges">
+            {poll.is_closed && <span className="poll-badge closed">Closed</span>}
+            {poll.is_recurring && <span className="poll-badge recurring">🔁 Recurring</span>}
+            {isOwner && <span className="poll-badge owner">Your Poll</span>}
+            {!isOwner && isAdmin && poll.created_by_user_id && (
+              <span className="poll-badge admin-managed">Admin</span>
+            )}
+          </div>
         </div>
         <div className="poll-meta">
           <span className="poll-date">{formatDate(poll.event_date)}</span>
           <span className="poll-time">
             {formatTime(poll.start_time)} – {formatTime(poll.end_time)}
           </span>
+          {poll.template_id === null && poll.created_by_username && (
+            <span className="poll-creator">by {poll.created_by_username}</span>
+          )}
         </div>
         {poll.description && (
           <p className="poll-description">{poll.description}</p>
@@ -118,11 +146,41 @@ export default function PollCard({ poll, onVoteChange }: Props) {
         </div>
       )}
 
+      {(canEdit || canDelete) && (
+        <div className="poll-owner-actions">
+          {canEdit && (
+            <button
+              className="owner-btn edit-btn"
+              onClick={() => { setShowEditModal(true); setDeleteConfirm(false); }}
+            >
+              ✏️ Edit
+            </button>
+          )}
+          {canDelete && (
+            <button
+              className={`owner-btn delete-btn ${deleteConfirm ? 'confirm' : ''}`}
+              onClick={handleDelete}
+              onBlur={() => setDeleteConfirm(false)}
+            >
+              {deleteConfirm ? '⚠️ Confirm Delete' : '🗑️ Delete'}
+            </button>
+          )}
+        </div>
+      )}
+
       {showModal && (
         <VoteListModal
           title={poll.title}
           votes={poll.votes}
           onClose={() => setShowModal(false)}
+        />
+      )}
+
+      {showEditModal && (
+        <PollFormModal
+          existing={poll}
+          onClose={() => setShowEditModal(false)}
+          onSaved={onVoteChange}
         />
       )}
     </div>

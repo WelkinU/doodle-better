@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
-import { createOrGetUser, updateUsername } from '../api';
+import { createOrGetUser, updateUsername, checkIsAdmin } from '../api';
 
 function generateUUID(): string {
   if (typeof crypto.randomUUID === 'function') {
@@ -17,6 +17,7 @@ interface UserContextType {
   username: string;
   setUsername: (name: string) => Promise<void>;
   isRegistered: boolean;
+  isAdmin: boolean;
 }
 
 const UserContext = createContext<UserContextType>({
@@ -24,6 +25,7 @@ const UserContext = createContext<UserContextType>({
   username: '',
   setUsername: async () => {},
   isRegistered: false,
+  isAdmin: false,
 });
 
 export function UserProvider({ children }: { children: ReactNode }) {
@@ -35,6 +37,12 @@ export function UserProvider({ children }: { children: ReactNode }) {
     return localStorage.getItem('doodle-username') || '';
   });
   const [isRegistered, setIsRegistered] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  // Check admin status once on mount
+  useEffect(() => {
+    checkIsAdmin().then(r => setIsAdmin(r.is_admin)).catch(() => {});
+  }, []);
 
   // Persist userId
   useEffect(() => {
@@ -74,7 +82,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <UserContext.Provider value={{ userId, username, setUsername, isRegistered }}>
+    <UserContext.Provider value={{ userId, username, setUsername, isRegistered, isAdmin }}>
       {children}
     </UserContext.Provider>
   );

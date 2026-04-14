@@ -18,6 +18,8 @@ from backend.schemas import (
     UserCreate,
     UserOut,
     UsernameCollisionWarning,
+    UserPollCreate,
+    UserPollUpdate,
     VoteCreate,
     VoteOut,
     WeekPollsOut,
@@ -45,6 +47,11 @@ def _check_admin(request: Request):
         raise HTTPException(status_code=403, detail="Admin access required")
 
 
+def _is_admin(request: Request) -> bool:
+    ip = _get_client_ip(request)
+    return ip in config.admin_ip_allowlist
+
+
 def _check_username_blacklist(username: str):
     if username.strip().lower() in [u.lower() for u in config.username_blacklist]:
         raise HTTPException(status_code=403, detail="This username is not allowed")
@@ -67,12 +74,15 @@ def _poll_to_out(poll: Poll) -> PollOut:
     return PollOut(
         id=poll.id,
         template_id=poll.template_id,
+        created_by_user_id=poll.created_by_user_id,
+        created_by_username=poll.creator.username if poll.creator else None,
         title=poll.title,
         description=poll.description,
         event_date=poll.event_date,
         start_time=poll.start_time,
         end_time=poll.end_time,
         is_closed=poll.is_closed,
+        is_recurring=poll.template.is_recurring if poll.template else False,
         week_start=poll.week_start,
         votes=votes_out,
         summary=summary,
@@ -139,6 +149,11 @@ def check_username_collision(user_id: str, poll_id: str, db: Session = Depends(g
                         f'Consider using a different username to avoid confusion!'
             )
     return UsernameCollisionWarning(has_collision=False)
+
+
+@router.get("/admin/check")
+def check_admin(request: Request):
+    return {"is_admin": _is_admin(request)}
 
 
 # ── Poll endpoints ──────────────────────────────────────────────────
@@ -283,6 +298,77 @@ def remove_vote(poll_id: str, user_id: str, request: Request, db: Session = Depe
     return {"ok": True}
 
 
+# ── User poll management (non-admin) ────────────────────────────────
+
+@router.post("/polls", response_model=PollOut)
+def user_create_poll(data: UserPollCreate, request: Request, db: Session = Depends(get_db)):
+    _check_ip_blacklist(request)
+    user = db.query(User).filter(User.id == data.user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found. Register first.")
+    try:
+        ed = date.fromisoformat(data.event_date)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD.")
+    ws = get_week_start(ed)
+    poll = Poll(
+        title=data.title.strip(),
+        description=data.description.strip(),
+        event_date=data.event_date,
+        start_time=data.start_time,
+        end_time=data.end_time,
+        week_start=ws.isoformat(),
+        created_by_user_id=data.user_id,
+    )
+    db.add(poll)
+    db.commit()
+    db.refresh(poll)
+    return _poll_to_out(poll)
+
+
+@router.put("/polls/{poll_id}", response_model=PollOut)
+def user_update_poll(poll_id: str, data: UserPollUpdate, request: Request, db: Session = Depends(get_db)):
+    _check_ip_blacklist(request)
+    poll = db.query(Poll).filter(Poll.id == poll_id).first()
+    if not poll:
+        raise HTTPException(status_code=404, detail="Poll not found")
+    if poll.created_by_user_id != data.user_id and not _is_admin(request):
+        raise HTTPException(status_code=403, detail="You can only edit polls you created")
+    if poll.is_closed:
+        raise HTTPException(status_code=400, detail="Cannot edit a closed poll")
+    if data.title is not None:
+        poll.title = data.title.strip()
+    if data.description is not None:
+        poll.description = data.description.strip()
+    if data.event_date is not None:
+        try:
+            ed = date.fromisoformat(data.event_date)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD.")
+        poll.event_date = data.event_date
+        poll.week_start = get_week_start(ed).isoformat()
+    if data.start_time is not None:
+        poll.start_time = data.start_time
+    if data.end_time is not None:
+        poll.end_time = data.end_time
+    db.commit()
+    db.refresh(poll)
+    return _poll_to_out(poll)
+
+
+@router.delete("/polls/{poll_id}")
+def user_delete_poll(poll_id: str, user_id: str, request: Request, db: Session = Depends(get_db)):
+    _check_ip_blacklist(request)
+    poll = db.query(Poll).filter(Poll.id == poll_id).first()
+    if not poll:
+        raise HTTPException(status_code=404, detail="Poll not found")
+    if poll.created_by_user_id != user_id and not _is_admin(request):
+        raise HTTPException(status_code=403, detail="You can only delete polls you created")
+    db.delete(poll)
+    db.commit()
+    return {"ok": True}
+
+
 # ── Admin: Event Template endpoints ──────────────────────────────────
 
 @router.get("/admin/templates", response_model=list[EventTemplateOut])
@@ -309,7 +395,7 @@ def create_template(data: EventTemplateCreate, request: Request, db: Session = D
     # Immediately create the poll for the current week so it shows on the homepage,
     # regardless of whether the template is recurring or one-off.
     ws = get_week_start()
-    create_poll_from_template(db, tmpl, ws)
+    create_poll_from_template(db, tmpl, ws, created_by_user_id=data.created_by_user_id)
     db.commit()
 
     return tmpl
@@ -461,5 +547,27 @@ def admin_delete_poll(poll_id: str, request: Request, db: Session = Depends(get_
     if not poll:
         raise HTTPException(status_code=404, detail="Poll not found")
     db.delete(poll)
+    db.commit()
+    return {"ok": True}
+
+
+@router.delete("/admin/polls/{poll_id}/votes")
+def admin_reset_votes(poll_id: str, request: Request, db: Session = Depends(get_db)):
+    _check_admin(request)
+    poll = db.query(Poll).filter(Poll.id == poll_id).first()
+    if not poll:
+        raise HTTPException(status_code=404, detail="Poll not found")
+    db.query(Vote).filter(Vote.poll_id == poll_id).delete()
+    db.commit()
+    return {"ok": True}
+
+
+@router.delete("/admin/polls/{poll_id}/votes/{vote_id}")
+def admin_remove_vote(poll_id: str, vote_id: int, request: Request, db: Session = Depends(get_db)):
+    _check_admin(request)
+    vote = db.query(Vote).filter(Vote.id == vote_id, Vote.poll_id == poll_id).first()
+    if not vote:
+        raise HTTPException(status_code=404, detail="Vote not found")
+    db.delete(vote)
     db.commit()
     return {"ok": True}

@@ -45,7 +45,12 @@ def is_poll_closed(poll: Poll) -> bool:
     return now > event_end
 
 
-def create_poll_from_template(db: Session, tmpl: "EventTemplate", week_start_date: date) -> Poll | None:
+def create_poll_from_template(
+    db: Session,
+    tmpl: "EventTemplate",
+    week_start_date: date,
+    created_by_user_id: str | None = None,
+) -> "Poll | None":
     """Create and persist a single poll for a template in the given week.
     Returns the new Poll, or None if the day_of_week is unrecognised.
     Does NOT commit — caller is responsible for commit.
@@ -67,6 +72,7 @@ def create_poll_from_template(db: Session, tmpl: "EventTemplate", week_start_dat
         end_time=tmpl.end_time,
         is_closed=False,
         week_start=ws_str,
+        created_by_user_id=created_by_user_id,
     )
     db.add(poll)
     return poll

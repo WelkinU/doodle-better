@@ -49,6 +49,7 @@ class Poll(Base):
 
     id = Column(String(36), primary_key=True, default=_generate_uuid)
     template_id = Column(String(36), ForeignKey("event_templates.id"), nullable=True)
+    created_by_user_id = Column(String(36), ForeignKey("users.id"), nullable=True)
     title = Column(String(200), nullable=False)
     description = Column(Text, nullable=True, default="")
     event_date = Column(String(10), nullable=False)    # YYYY-MM-DD
@@ -60,6 +61,7 @@ class Poll(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     template = relationship("EventTemplate", back_populates="polls")
+    creator = relationship("User", foreign_keys=[created_by_user_id])
     votes = relationship("Vote", back_populates="poll", cascade="all, delete-orphan")
 
 

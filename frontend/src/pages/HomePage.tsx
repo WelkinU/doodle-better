@@ -9,6 +9,8 @@ export default function HomePage() {
   const [data, setData] = useState<WeekPollsOut | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showOpenAdmin, setShowOpenAdmin] = useState(true);
+  const [showOpenUser, setShowOpenUser] = useState(true);
   const [showClosed, setShowClosed] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -71,6 +73,9 @@ export default function HomePage() {
 
   if (!data) return null;
 
+  const adminOpenPolls = data.open_polls.filter(p => p.template_id !== null);
+  const userOpenPolls = data.open_polls.filter(p => p.template_id === null);
+
   const weekLabel = new Date(data.week_start + 'T00:00:00').toLocaleDateString('en-US', {
     month: 'long',
     day: 'numeric',
@@ -92,14 +97,39 @@ export default function HomePage() {
         </div>
       )}
 
-      {data.open_polls.length > 0 && (
+      {adminOpenPolls.length > 0 && (
         <div className="polls-section">
-          <h3 className="section-title">Open Polls</h3>
-          <div className="polls-grid">
-            {data.open_polls.map(poll => (
-              <PollCard key={poll.id} poll={poll} onVoteChange={fetchPolls} />
-            ))}
-          </div>
+          <button
+            className="accordion-toggle"
+            onClick={() => setShowOpenAdmin(prev => !prev)}
+          >
+            {showOpenAdmin ? '▼' : '▶'} Open Polls ({adminOpenPolls.length})
+          </button>
+          {showOpenAdmin && (
+            <div className="polls-grid">
+              {adminOpenPolls.map(poll => (
+                <PollCard key={poll.id} poll={poll} onVoteChange={fetchPolls} />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {userOpenPolls.length > 0 && (
+        <div className="polls-section user-polls-section">
+          <button
+            className="accordion-toggle"
+            onClick={() => setShowOpenUser(prev => !prev)}
+          >
+            {showOpenUser ? '▼' : '▶'} User Created Polls ({userOpenPolls.length})
+          </button>
+          {showOpenUser && (
+            <div className="polls-grid">
+              {userOpenPolls.map(poll => (
+                <PollCard key={poll.id} poll={poll} onVoteChange={fetchPolls} />
+              ))}
+            </div>
+          )}
         </div>
       )}
 

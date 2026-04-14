@@ -39,18 +39,39 @@ class VoteOut(BaseModel):
 class PollOut(BaseModel):
     id: str
     template_id: str | None
+    created_by_user_id: str | None
+    created_by_username: str | None
     title: str
     description: str | None
     event_date: str
     start_time: str
     end_time: str
     is_closed: bool
+    is_recurring: bool
     week_start: str
     votes: list[VoteOut]
     summary: dict[str, int]  # {"in": 5, "tentative": 2, "out": 1}
 
     class Config:
         from_attributes = True
+
+
+class UserPollCreate(BaseModel):
+    user_id: str
+    title: str
+    description: str = ""
+    event_date: str   # YYYY-MM-DD
+    start_time: str   # HH:MM
+    end_time: str     # HH:MM
+
+
+class UserPollUpdate(BaseModel):
+    user_id: str
+    title: str | None = None
+    description: str | None = None
+    event_date: str | None = None
+    start_time: str | None = None
+    end_time: str | None = None
 
 
 class EventTemplateCreate(BaseModel):
@@ -60,6 +81,7 @@ class EventTemplateCreate(BaseModel):
     start_time: str
     end_time: str
     is_recurring: bool = False
+    created_by_user_id: str | None = None
 
 
 class EventTemplateUpdate(BaseModel):
@@ -84,6 +106,15 @@ class EventTemplateOut(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class AdminPollUpdate(BaseModel):
+    title: str | None = None
+    description: str | None = None
+    event_date: str | None = None
+    start_time: str | None = None
+    end_time: str | None = None
+    is_closed: bool | None = None
 
 
 class WeekPollsOut(BaseModel):

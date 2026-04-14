@@ -304,6 +304,10 @@ a:hover {
   margin-top: 1.5rem;
 }
 
+.user-polls-section {
+  margin-top: 2rem;
+}
+
 .accordion-toggle {
   background: var(--bg-card);
   border: 1px solid var(--border);
@@ -366,6 +370,14 @@ a:hover {
   background: var(--red-bg);
   color: var(--red-text);
 }
+.poll-badge.admin-managed {
+  background: var(--yellow-bg);
+  color: var(--yellow-text);
+}
+.poll-badge.recurring {
+  background: var(--accent-bg, #e8f4fd);
+  color: var(--accent, #2563eb);
+}
 
 .poll-meta {
   display: flex;
@@ -373,6 +385,12 @@ a:hover {
   font-size: 0.85rem;
   color: var(--text-secondary);
   margin-bottom: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.poll-creator {
+  font-style: italic;
+  opacity: 0.8;
 }
 
 .poll-description {
@@ -485,6 +503,11 @@ a:hover {
   border-collapse: collapse;
 }
 
+.admin-votes-table .vote-action {
+  text-align: right;
+  padding-right: 1rem;
+}
+
 .vote-row td {
   padding: 0.45rem 1.25rem;
   font-size: 0.85rem;
@@ -558,6 +581,20 @@ a:hover {
   color: var(--text-muted);
   margin-bottom: 1.25rem;
   font-size: 0.9rem;
+}
+
+.admin-section {
+  margin-top: 2rem;
+}
+.admin-section-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid var(--border);
 }
 
 .admin-denied {
@@ -690,6 +727,28 @@ a:hover {
 .btn-sm {
   padding: 0.3rem 0.6rem;
   font-size: 0.8rem;
+}
+
+.btn-manage-votes {
+  background: var(--accent-bg, #e8f4fd);
+  color: var(--accent, #2563eb);
+  border-color: var(--accent, #2563eb);
+}
+.btn-manage-votes:hover {
+  background: var(--accent, #2563eb);
+  color: #fff;
+}
+
+.modal-footer {
+  padding: 0.75rem 1.25rem;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: flex-end;
+  flex-shrink: 0;
+}
+
+.admin-vote-modal {
+  max-width: 500px;
 }
 
 /* ── Template List ────────────────────────────────────────────── */
@@ -888,4 +947,210 @@ a:hover {
 .modal-body {
   overflow-y: auto;
   flex: 1;
+}
+
+/* ── My Polls Page ────────────────────────────────────────────── */
+.my-polls-page {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+.my-polls-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.my-polls-header h2 {
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+
+.my-polls-empty {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: var(--text-muted);
+  font-size: 1rem;
+  line-height: 1.8;
+}
+
+.error-inline {
+  color: var(--red-text);
+  background: var(--red-bg);
+  border-radius: var(--radius-sm);
+  padding: 0.6rem 1rem;
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+}
+
+/* ── Poll Form Modal ──────────────────────────────────────────── */
+.poll-form-modal {
+  max-width: 480px;
+}
+
+.poll-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.25rem;
+}
+
+.poll-form-error {
+  background: var(--red-bg);
+  color: var(--red-text);
+  border: 1px solid var(--red);
+  border-radius: var(--radius-sm);
+  padding: 0.6rem 0.9rem;
+  font-size: 0.875rem;
+}
+
+.poll-form-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.poll-form-label .required {
+  color: var(--red);
+}
+
+.poll-form-input {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.5rem 0.75rem;
+  font-size: 0.9rem;
+  font-family: var(--font);
+  color: var(--text);
+  transition: border-color 0.15s;
+  width: 100%;
+}
+.poll-form-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.poll-form-textarea {
+  resize: vertical;
+  min-height: 3.5rem;
+}
+
+.poll-form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.poll-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding-top: 0.25rem;
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 0.55rem 1.25rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  font-family: var(--font);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.btn-primary:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+.btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  background: var(--bg-card);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.55rem 1.25rem;
+  font-size: 0.9rem;
+  font-family: var(--font);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.btn-secondary:hover:not(:disabled) {
+  background: var(--border-light);
+}
+
+/* ── Create Poll button in week header ────────────────────────── */
+.week-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.create-poll-btn {
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 0.5rem 1rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  font-family: var(--font);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.create-poll-btn:hover {
+  background: var(--accent-hover);
+}
+
+/* ── Owner badge & actions on PollCard ───────────────────────── */
+.poll-title-badges {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-shrink: 0;
+}
+
+.poll-badge.owner {
+  background: var(--accent);
+  color: white;
+}
+
+.poll-owner-actions {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.6rem 1rem 0.75rem;
+  border-top: 1px solid var(--border-light);
+}
+
+.owner-btn {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.35rem 0.75rem;
+  font-size: 0.8rem;
+  font-family: var(--font);
+  cursor: pointer;
+  transition: all 0.15s;
+  color: var(--text-secondary);
+}
+.owner-btn:hover {
+  background: var(--border-light);
+  color: var(--text);
+}
+.owner-btn.delete-btn.confirm {
+  background: var(--red-bg);
+  color: var(--red-text);
+  border-color: var(--red);
 }

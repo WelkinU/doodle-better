@@ -16,8 +16,11 @@ export default function Layout() {
           </Link>
         </div>
         <nav className="header-nav">
-          <Link to="/" className={location.pathname === '/' ? 'active' : ''}>
+          <Link to="/" className={location.pathname === '/' || location.pathname.startsWith('/week/') ? 'active' : ''}>
             This Week
+          </Link>
+          <Link to="/my-polls" className={location.pathname === '/my-polls' ? 'active' : ''}>
+            My Polls
           </Link>
           <Link to="/history" className={location.pathname === '/history' ? 'active' : ''}>
             History

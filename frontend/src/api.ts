@@ -52,6 +52,10 @@ export const removeVote = (pollId: string, userId: string) =>
     method: 'DELETE',
   });
 
+// Admin
+export const checkIsAdmin = () =>
+  request<{ is_admin: boolean }>('/admin/check');
+
 // Admin - Templates
 export const getTemplates = () =>
   request<import('./types').EventTemplateOut[]>('/admin/templates');
@@ -59,11 +63,17 @@ export const getTemplates = () =>
 export const createTemplate = (data: {
   title: string; description: string; day_of_week: string;
   start_time: string; end_time: string; is_recurring: boolean;
+  created_by_user_id?: string;
 }) =>
   request<import('./types').EventTemplateOut>('/admin/templates', {
     method: 'POST',
     body: JSON.stringify(data),
   });
+
+export const getAdminPolls = (week?: string) =>
+  request<import('./types').PollOut[]>(
+    week ? `/admin/polls?week=${encodeURIComponent(week)}` : '/admin/polls'
+  );
 
 export const updateTemplate = (id: string, data: Record<string, unknown>) =>
   request<import('./types').EventTemplateOut>(`/admin/templates/${id}`, {
@@ -75,3 +85,34 @@ export const deleteTemplate = (id: string, deleteFuture: boolean) =>
   request<{ ok: boolean }>(`/admin/templates/${id}?delete_future=${deleteFuture}`, {
     method: 'DELETE',
   });
+
+// User-created polls
+export const createUserPoll = (data: {
+  user_id: string; title: string; description: string;
+  event_date: string; start_time: string; end_time: string;
+}) =>
+  request<import('./types').PollOut>('/polls', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+
+export const updateUserPoll = (poll_id: string, data: {
+  user_id: string; title?: string; description?: string;
+  event_date?: string; start_time?: string; end_time?: string;
+}) =>
+  request<import('./types').PollOut>(`/polls/${poll_id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
+
+export const deleteUserPoll = (poll_id: string, user_id: string) =>
+  request<{ ok: boolean }>(`/polls/${poll_id}?user_id=${encodeURIComponent(user_id)}`, {
+    method: 'DELETE',
+  });
+
+// Admin - Vote management
+export const adminResetVotes = (pollId: string) =>
+  request<{ ok: boolean }>(`/admin/polls/${pollId}/votes`, { method: 'DELETE' });
+
+export const adminRemoveVote = (pollId: string, voteId: number) =>
+  request<{ ok: boolean }>(`/admin/polls/${pollId}/votes/${voteId}`, { method: 'DELETE' });
