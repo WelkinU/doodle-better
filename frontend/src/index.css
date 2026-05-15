@@ -503,6 +503,12 @@ a:hover {
   border-collapse: collapse;
 }
 
+.inline-votes {
+  margin-top: 0.5rem;
+  border-top: 1px solid var(--border-light);
+  padding-top: 0.5rem;
+}
+
 .admin-votes-table .vote-action {
   text-align: right;
   padding-right: 1rem;

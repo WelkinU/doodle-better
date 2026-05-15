@@ -1,9 +1,11 @@
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
+import { useShowResponses } from '../context/ShowResponsesContext';
 import UserBar from './UserBar';
 
 export default function Layout() {
   const { dark, toggle } = useTheme();
+  const { showByDefault, toggle: toggleResponses } = useShowResponses();
   const location = useLocation();
 
   return (
@@ -30,6 +32,13 @@ export default function Layout() {
           </Link>
         </nav>
         <div className="header-right">
+          <button
+            className="theme-toggle"
+            onClick={toggleResponses}
+            title={showByDefault ? 'Hide responses by default' : 'Show responses by default'}
+          >
+            {showByDefault ? '📊' : '📋'}
+          </button>
           <button
             className="theme-toggle"
             onClick={toggle}

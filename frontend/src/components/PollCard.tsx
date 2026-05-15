@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { castVote, checkCollision, deleteUserPoll } from '../api';
 import { useUser } from '../context/UserContext';
+import { useShowResponses } from '../context/ShowResponsesContext';
 import type { PollOut } from '../types';
 import PollFormModal from './PollFormModal';
 import VoteListModal from './VoteListModal';
@@ -33,8 +34,16 @@ function formatDate(dateStr: string): string {
   });
 }
 
+const STATUS_LABELS: Record<string, string> = {
+  in: '✅ In',
+  tentative: '🤔 Maybe',
+  out: '❌ Out',
+  'no-reply': '—',
+};
+
 export default function PollCard({ poll, onVoteChange }: Props) {
   const { userId, username, isRegistered, isAdmin } = useUser();
+  const { showByDefault } = useShowResponses();
   const [loading, setLoading] = useState(false);
   const [collisionWarning, setCollisionWarning] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
@@ -116,6 +125,28 @@ export default function PollCard({ poll, onVoteChange }: Props) {
           <span className="summary-out">{poll.summary.out} Out</span>
           <span className="summary-see-all">See responses ›</span>
         </button>
+        {showByDefault && poll.votes.length > 0 && (
+          <div className="inline-votes">
+            <table className="votes-table">
+              <tbody>
+                {[...poll.votes]
+                  .sort((a, b) => {
+                    const order: Record<string, number> = { in: 0, tentative: 1, out: 2, 'no-reply': 3 };
+                    return (order[a.status] ?? 3) - (order[b.status] ?? 3);
+                  })
+                  .map(vote => (
+                    <tr
+                      key={vote.id}
+                      className={`vote-row ${STATUS_COLORS[vote.status]} ${vote.is_mine ? 'vote-mine' : ''}`}
+                    >
+                      <td className="vote-name">{vote.username}</td>
+                      <td className="vote-status">{STATUS_LABELS[vote.status]}</td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* Vote buttons */}
