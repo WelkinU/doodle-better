@@ -22,8 +22,10 @@ from backend.schemas import (
     UserPollUpdate,
     VoteCreate,
     VoteOut,
+    WeatherInfo,
     WeekPollsOut,
 )
+from backend.weather_service import get_weather_for_polls
 
 router = APIRouter(prefix="/api")
 
@@ -74,7 +76,7 @@ def _token_user_optional(x_user_token: str | None, db: Session) -> User | None:
     return db.query(User).filter(User.token == x_user_token).first()
 
 
-def _poll_to_out(poll: Poll, viewer_user_id: str | None = None) -> PollOut:
+def _poll_to_out(poll: Poll, viewer_user_id: str | None = None, weather_map: dict[str, dict | None] | None = None) -> PollOut:
     votes_out = []
     for v in poll.votes:
         votes_out.append(VoteOut(
@@ -88,6 +90,13 @@ def _poll_to_out(poll: Poll, viewer_user_id: str | None = None) -> PollOut:
     for v in votes_out:
         if v.status in summary:
             summary[v.status] += 1
+
+    weather = None
+    if weather_map:
+        key = f"{poll.event_date}T{poll.start_time[:2]}"
+        if key in weather_map and weather_map[key]:
+            weather = WeatherInfo(**weather_map[key])
+
     return PollOut(
         id=poll.id,
         template_id=poll.template_id,
@@ -104,6 +113,7 @@ def _poll_to_out(poll: Poll, viewer_user_id: str | None = None) -> PollOut:
         week_start=poll.week_start,
         votes=votes_out,
         summary=summary,
+        weather=weather,
     )
 
 
@@ -183,6 +193,10 @@ def get_current_week_polls(request: Request, db: Session = Depends(get_db), x_us
     viewer = _token_user_optional(x_user_token, db)
     viewer_user_id = viewer.id if viewer else None
 
+    # Batch-fetch weather for all unique (date, start_time) pairs
+    all_datetimes = list({(p.event_date, p.start_time) for p in polls})
+    weather_map = get_weather_for_polls(all_datetimes)
+
     open_polls = sorted(
         [p for p in polls if not p.is_closed],
         key=lambda p: (p.event_date, p.start_time),
@@ -193,8 +207,8 @@ def get_current_week_polls(request: Request, db: Session = Depends(get_db), x_us
     )
     return WeekPollsOut(
         week_start=ws.isoformat(),
-        open_polls=[_poll_to_out(p, viewer_user_id) for p in open_polls],
-        closed_polls=[_poll_to_out(p, viewer_user_id) for p in closed_polls],
+        open_polls=[_poll_to_out(p, viewer_user_id, weather_map) for p in open_polls],
+        closed_polls=[_poll_to_out(p, viewer_user_id, weather_map) for p in closed_polls],
     )
 
 
@@ -209,6 +223,11 @@ def get_week_polls(week_start_str: str, request: Request, db: Session = Depends(
     viewer_user_id = viewer.id if viewer else None
 
     polls = ensure_polls_for_week(db, ws)
+
+    # Batch-fetch weather for all unique (date, start_time) pairs
+    all_datetimes = list({(p.event_date, p.start_time) for p in polls})
+    weather_map = get_weather_for_polls(all_datetimes)
+
     open_polls = sorted(
         [p for p in polls if not p.is_closed],
         key=lambda p: (p.event_date, p.start_time),
@@ -219,8 +238,8 @@ def get_week_polls(week_start_str: str, request: Request, db: Session = Depends(
     )
     return WeekPollsOut(
         week_start=ws.isoformat(),
-        open_polls=[_poll_to_out(p, viewer_user_id) for p in open_polls],
-        closed_polls=[_poll_to_out(p, viewer_user_id) for p in closed_polls],
+        open_polls=[_poll_to_out(p, viewer_user_id, weather_map) for p in open_polls],
+        closed_polls=[_poll_to_out(p, viewer_user_id, weather_map) for p in closed_polls],
     )
 
 

@@ -36,6 +36,16 @@ class VoteOut(BaseModel):
         from_attributes = True
 
 
+class WeatherInfo(BaseModel):
+    temperature: float | None = None
+    temperature_unit: str = "°F"
+    condition: str | None = None
+    condition_icon: str | None = None
+    wind_speed: float | None = None
+    wind_speed_unit: str = "mph"
+    wind_direction: str | None = None
+
+
 class PollOut(BaseModel):
     id: str
     template_id: str | None
@@ -52,6 +62,7 @@ class PollOut(BaseModel):
     week_start: str
     votes: list[VoteOut]
     summary: dict[str, int]  # {"in": 5, "tentative": 2, "out": 1}
+    weather: WeatherInfo | None = None
 
     class Config:
         from_attributes = True

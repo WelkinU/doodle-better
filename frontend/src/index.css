@@ -393,6 +393,24 @@ a:hover {
   opacity: 0.8;
 }
 
+.poll-weather {
+  display: flex;
+  gap: 0.6rem;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.5rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.poll-weather span {
+  white-space: nowrap;
+}
+
+.weather-condition {
+  font-weight: 500;
+}
+
 .poll-description {
   font-size: 0.85rem;
   color: var(--text-muted);

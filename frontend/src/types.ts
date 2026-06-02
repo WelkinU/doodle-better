@@ -6,6 +6,16 @@ export interface VoteOut {
   is_mine: boolean;
 }
 
+export interface WeatherInfo {
+  temperature: number | null;
+  temperature_unit: string;
+  condition: string | null;
+  condition_icon: string | null;
+  wind_speed: number | null;
+  wind_speed_unit: string;
+  wind_direction: string | null;
+}
+
 export interface PollOut {
   id: string;
   template_id: string | null;
@@ -22,6 +32,7 @@ export interface PollOut {
   week_start: string;
   votes: VoteOut[];
   summary: { in: number; tentative: number; out: number };
+  weather?: WeatherInfo | null;
 }
 
 export interface WeekPollsOut {

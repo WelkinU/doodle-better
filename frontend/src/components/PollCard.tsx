@@ -112,6 +112,26 @@ export default function PollCard({ poll, onVoteChange }: Props) {
             <span className="poll-creator">by {poll.created_by_username}</span>
           )}
         </div>
+        {poll.weather && (
+          <div className="poll-weather">
+            {poll.weather.condition_icon && poll.weather.condition && (
+              <span className="weather-condition">
+                {poll.weather.condition_icon} {poll.weather.condition}
+              </span>
+            )}
+            {poll.weather.temperature !== null && (
+              <span className="weather-temp">
+                {poll.weather.temperature}{poll.weather.temperature_unit}
+              </span>
+            )}
+            {poll.weather.wind_speed !== null && (
+              <span className="weather-wind">
+                💨 {poll.weather.wind_speed} {poll.weather.wind_speed_unit}
+                {poll.weather.wind_direction && ` ${poll.weather.wind_direction}`}
+              </span>
+            )}
+          </div>
+        )}
         {poll.description && (
           <p className="poll-description">{poll.description}</p>
         )}

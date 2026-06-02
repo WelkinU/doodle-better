@@ -34,6 +34,19 @@ blacklists:
   # Blocked usernames (empty by default)
   username_blacklist: []
 
+weather:
+  # Enable weather info display on poll cards
+  enabled: true
+  # GPS coordinates for weather data (default: Lowell, MA, USA)
+  latitude: 42.643008873218264
+  longitude: -71.37448784353643
+  # Temperature unit: "fahrenheit" or "celsius"
+  temperature_unit: "fahrenheit"
+  # Wind speed unit: "mph", "kmh", "ms", or "kn"
+  wind_speed_unit: "mph"
+  # How long to cache weather data (minutes)
+  cache_ttl_minutes: 30
+
 frontend:
   # Vite dev server port (used during development only)
   dev_port: 5173

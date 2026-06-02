@@ -59,5 +59,13 @@ class Config:
 
         self.default_events: list[dict] = raw.get("default_events", [])
 
+        weather = raw.get("weather", {})
+        self.weather_enabled: bool = weather.get("enabled", False)
+        self.weather_latitude: float = float(weather.get("latitude", 0.0))
+        self.weather_longitude: float = float(weather.get("longitude", 0.0))
+        self.weather_temperature_unit: str = weather.get("temperature_unit", "fahrenheit")
+        self.weather_wind_speed_unit: str = weather.get("wind_speed_unit", "mph")
+        self.weather_cache_ttl_minutes: int = int(weather.get("cache_ttl_minutes", 30))
+
 
 config = Config()
